@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.Zone.Identifier
+
+# Project specific
+results/*.json
+results/*.txt
+results/*.pdf
+results/*.png
+results/figures/
+checkpoints/*.pt
+checkpoints/*.pth
+wandb/
+*.log
+
+# Keep structure files
+!results/.gitkeep
+!checkpoints/.gitkeep
+
+# Large files
+get-pip.py
+
+# Temporary files
+*.tmp
+*.bak
