@@ -101,13 +101,13 @@ run_experiment() {
     
     # Check if already completed
     if is_completed ${placement} ${epsilon}; then
-        echo "⏭️  Skipping ${placement} | ε=${epsilon} (already completed)"
+        echo ">> Skipping ${placement} | eps=${epsilon} (already completed)"
         echo ""
         return 0
     fi
     
     echo "=========================================="
-    echo "Running: ${placement} | ε=${epsilon}"
+    echo "Running: ${placement} | eps=${epsilon}"
     echo "Started: $(date)"
     echo "=========================================="
     
@@ -129,7 +129,7 @@ run_experiment() {
         # Success
         mark_completed ${placement} ${epsilon}
         echo ""
-        echo "✅ COMPLETED: ${placement} | ε=${epsilon}"
+        echo "[OK] COMPLETED: ${placement} | eps=${epsilon}"
         echo "Finished: $(date)"
         
         # Generate intermediate report
@@ -142,7 +142,7 @@ run_experiment() {
         # Failure
         mark_failed ${placement} ${epsilon}
         echo ""
-        echo "❌ FAILED: ${placement} | ε=${epsilon}"
+        echo "[FAIL] FAILED: ${placement} | eps=${epsilon}"
         echo "Check log: ${RESULTS_DIR}/${placement}_eps${epsilon}_${log_suffix}.log"
         echo ""
         
@@ -163,7 +163,7 @@ run_mia_for_placement() {
     
     if [ -f "${checkpoint}" ]; then
         echo "=========================================="
-        echo "Running MIA: ${placement} | ε=${epsilon}"
+        echo "Running MIA: ${placement} | eps=${epsilon}"
         echo "=========================================="
         
         if python scripts/run_mia.py \
@@ -172,14 +172,14 @@ run_mia_for_placement() {
             --dataset ${DATASET} \
             2>&1 | tee ${RESULTS_DIR}/mia_${placement}_eps${epsilon}_${log_suffix}.log; then
             
-            echo "✅ MIA completed for ${placement} | ε=${epsilon}"
+            echo "[OK] MIA completed for ${placement} | eps=${epsilon}"
         else
-            echo "⚠️  MIA failed for ${placement} | ε=${epsilon}"
+            echo "[WARN] MIA failed for ${placement} | eps=${epsilon}"
         fi
         echo ""
     else
-        echo "⚠️  Checkpoint not found: ${checkpoint}"
-        echo "Skipping MIA for ${placement} | ε=${epsilon}"
+        echo "[WARN] Checkpoint not found: ${checkpoint}"
+        echo "Skipping MIA for ${placement} | eps=${epsilon}"
         echo ""
     fi
 }
@@ -253,17 +253,17 @@ display_progress() {
     echo "=========================================="
     echo ""
     
-    local total=$(grep -c "^[^#]" ${PROGRESS_FILE})
-    local completed=$(grep -c "completed" ${PROGRESS_FILE})
-    local running=$(grep -c "running" ${PROGRESS_FILE})
-    local pending=$(grep -c "pending" ${PROGRESS_FILE})
-    local failed=$(grep -c "failed" ${PROGRESS_FILE})
+    local total=$(grep -c "^[^#]" ${PROGRESS_FILE} || echo 0)
+    local completed=$(grep -c "completed" ${PROGRESS_FILE} || echo 0)
+    local running=$(grep -c "running" ${PROGRESS_FILE} || echo 0)
+    local pending=$(grep -c "pending" ${PROGRESS_FILE} || echo 0)
+    local failed=$(grep -c "failed" ${PROGRESS_FILE} || echo 0)
     
     echo "Total Experiments: ${total}"
-    echo "✅ Completed: ${completed}"
-    echo "🔄 Running: ${running}"
-    echo "⏳ Pending: ${pending}"
-    echo "❌ Failed: ${failed}"
+    echo "[OK]      Completed: ${completed}"
+    echo "[RUN]     Running:   ${running}"
+    echo "[PENDING] Pending:   ${pending}"
+    echo "[FAIL]    Failed:    ${failed}"
     echo ""
     
     echo "Progress: ${completed}/${total} ($(( completed * 100 / total ))%)"
@@ -273,13 +273,13 @@ display_progress() {
     echo "----------------"
     grep "^[^#]" ${PROGRESS_FILE} | while IFS=',' read -r placement epsilon status timestamp; do
         case ${status} in
-            completed) icon="✅" ;;
-            running)   icon="🔄" ;;
-            pending)   icon="⏳" ;;
-            failed)    icon="❌" ;;
-            *)         icon="❓" ;;
+            completed) icon="[OK]  " ;;
+            running)   icon="[RUN] " ;;
+            pending)   icon="[    ]" ;;
+            failed)    icon="[FAIL]" ;;
+            *)         icon="[????]" ;;
         esac
-        printf "%-20s ε=%-4s %s %s\n" "${placement}" "${epsilon}" "${icon}" "${status}"
+        printf "%-20s eps=%-4s %s %s\n" "${placement}" "${epsilon}" "${icon}" "${status}"
     done
     echo ""
 }
@@ -297,9 +297,9 @@ display_progress
 # ============================================
 # PHASE 1: Epsilon = 8.0 (All Placements)
 # ============================================
-echo "╔════════════════════════════════════════╗"
-echo "║  PHASE 1: ε = 8.0 (All Placements)    ║"
-echo "╚════════════════════════════════════════╝"
+echo "+========================================+"
+echo "|  PHASE 1: eps = 8.0 (All Placements)  |"
+echo "+========================================+"
 echo ""
 
 EPSILON=8.0
@@ -309,15 +309,15 @@ for placement in no_dp adapter_only head_adapter last_layer full_dp partial_back
     display_progress
 done
 
-echo "✓ Phase 1 complete!"
+echo "[OK] Phase 1 complete!"
 echo ""
 
 # ============================================
 # PHASE 2: Epsilon = 1.0 (All Placements)
 # ============================================
-echo "╔════════════════════════════════════════╗"
-echo "║  PHASE 2: ε = 1.0 (All Placements)    ║"
-echo "╚════════════════════════════════════════╝"
+echo "+========================================+"
+echo "|  PHASE 2: eps = 1.0 (All Placements)  |"
+echo "+========================================+"
 echo ""
 
 EPSILON=1.0
@@ -327,7 +327,7 @@ for placement in no_dp adapter_only head_adapter last_layer full_dp partial_back
     display_progress
 done
 
-echo "✓ Phase 2 complete!"
+echo "[OK] Phase 2 complete!"
 echo ""
 
 # ============================================
