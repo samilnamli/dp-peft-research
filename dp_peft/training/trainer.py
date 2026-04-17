@@ -45,7 +45,15 @@ class DPPEFTTrainer:
         Path(results_dir).mkdir(parents=True, exist_ok=True)
         
         self.model = self.dp_placement.prepare_model()
-        
+
+        # ModuleValidator.fix() replaces layer instances, producing new parameter objects.
+        # Rebuild the optimizer so its param list matches the fixed model exactly.
+        if self.dp_placement.strategy.value != 'no_dp':
+            lr = self.optimizer.param_groups[0]['lr']
+            weight_decay = self.optimizer.param_groups[0].get('weight_decay', 0.0)
+            trainable = [p for p in self.model.parameters() if p.requires_grad]
+            self.optimizer = torch.optim.AdamW(trainable, lr=lr, weight_decay=weight_decay)
+
         if self.dp_placement.strategy.value != 'no_dp':
             self.optimizer, self.train_loader = self.dp_placement.attach_privacy_engine(
                 self.optimizer,
