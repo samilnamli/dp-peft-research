@@ -1,3 +1,5 @@
+import sys
+import types
 from enum import Enum
 from typing import List, Optional
 import torch.nn as nn
@@ -30,6 +32,30 @@ class DPPlacement:
         self.top_k_layers = top_k_layers
         self.privacy_engine = None
         
+    @staticmethod
+    def _fix_peft_classes_for_pickle(model: nn.Module) -> None:
+        """
+        PEFT dynamically subclasses HuggingFace models and sets __module__ = 'abc'
+        on those generated classes.  Opacus's ModuleValidator.fix() internally
+        pickles the model (via clone_module), which fails because Python cannot
+        resolve 'abc.BertModel' (or any other dynamically-created name).
+
+        Fix: walk every module in the tree; for any class whose module cannot be
+        resolved via sys.modules, re-register it under a stable synthetic module
+        so pickle can find it again.
+        """
+        namespace = sys.modules.get('dp_peft._peft_dynamic_classes')
+        if namespace is None:
+            namespace = types.ModuleType('dp_peft._peft_dynamic_classes')
+            sys.modules['dp_peft._peft_dynamic_classes'] = namespace
+
+        for submodule in model.modules():
+            cls = submodule.__class__
+            mod = sys.modules.get(cls.__module__)
+            if mod is None or not hasattr(mod, cls.__name__):
+                cls.__module__ = 'dp_peft._peft_dynamic_classes'
+                setattr(namespace, cls.__name__, cls)
+
     def prepare_model(self):
         if self.strategy == DPPlacementStrategy.NO_DP:
             return self._no_dp()
@@ -50,6 +76,7 @@ class DPPlacement:
         return self.model
     
     def _full_dp(self):
+        self._fix_peft_classes_for_pickle(self.model)
         self.model = ModuleValidator.fix(self.model)
         
         for param in self.model.parameters():
@@ -59,6 +86,7 @@ class DPPlacement:
         return self.model
     
     def _last_layer_dp(self):
+        self._fix_peft_classes_for_pickle(self.model)
         self.model = ModuleValidator.fix(self.model)
         
         for name, param in self.model.named_parameters():
@@ -70,6 +98,7 @@ class DPPlacement:
         return self.model
     
     def _adapter_only_dp(self):
+        self._fix_peft_classes_for_pickle(self.model)
         self.model = ModuleValidator.fix(self.model)
         
         for name, param in self.model.named_parameters():
@@ -81,6 +110,7 @@ class DPPlacement:
         return self.model
     
     def _head_adapter_dp(self):
+        self._fix_peft_classes_for_pickle(self.model)
         self.model = ModuleValidator.fix(self.model)
         
         for name, param in self.model.named_parameters():
@@ -92,6 +122,7 @@ class DPPlacement:
         return self.model
     
     def _partial_backbone_dp(self):
+        self._fix_peft_classes_for_pickle(self.model)
         self.model = ModuleValidator.fix(self.model)
         
         if hasattr(self.model, 'backbone'):
