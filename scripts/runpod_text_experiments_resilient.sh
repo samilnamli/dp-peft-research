@@ -3,7 +3,8 @@
 # Runs text experiments only (BERT + AG News) with MIA
 # Saves and reports after EACH placement to handle GPU interruptions
 
-set -e  # Exit on error
+set -e          # Exit on unhandled errors
+set -o pipefail # Pipeline exit code = exit code of first failing command
 
 echo "=========================================="
 echo "DP-PEFT Text Experiments - DP Placements Only (Resilient Mode)"
@@ -74,7 +75,9 @@ mark_running() {
     local placement=$1
     local epsilon=$2
     local timestamp=$(date +%Y%m%d_%H%M%S)
+    # Handle both pending -> running and failed -> running (for retries)
     sed -i "s/^${placement},${epsilon},pending,.*/${placement},${epsilon},running,${timestamp}/" ${PROGRESS_FILE}
+    sed -i "s/^${placement},${epsilon},failed,.*/${placement},${epsilon},running,${timestamp}/" ${PROGRESS_FILE}
 }
 
 # Function to mark experiment as completed
