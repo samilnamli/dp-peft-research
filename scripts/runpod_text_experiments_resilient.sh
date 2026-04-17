@@ -6,7 +6,7 @@
 set -e  # Exit on error
 
 echo "=========================================="
-echo "DP-PEFT Text Experiments (Resilient Mode)"
+echo "DP-PEFT Text Experiments - DP Placements Only (Resilient Mode)"
 echo "=========================================="
 echo ""
 
@@ -50,9 +50,9 @@ if [ ! -f "${PROGRESS_FILE}" ]; then
 # Status: pending, running, completed, failed
 EOF
     
-    # Initialize all experiments as pending
+    # Initialize DP-only experiments as pending (no_dp already completed separately)
     for epsilon in 8.0 1.0; do
-        for placement in no_dp adapter_only head_adapter last_layer full_dp partial_backbone; do
+        for placement in adapter_only head_adapter last_layer full_dp partial_backbone; do
             echo "${placement},${epsilon},pending," >> ${PROGRESS_FILE}
         done
     done
@@ -304,7 +304,7 @@ echo ""
 
 EPSILON=8.0
 
-for placement in no_dp adapter_only head_adapter last_layer full_dp partial_backbone; do
+for placement in adapter_only head_adapter last_layer full_dp partial_backbone; do
     run_experiment ${placement} ${EPSILON} ${LOG_SUFFIX}
     display_progress
 done
@@ -322,7 +322,7 @@ echo ""
 
 EPSILON=1.0
 
-for placement in no_dp adapter_only head_adapter last_layer full_dp partial_backbone; do
+for placement in adapter_only head_adapter last_layer full_dp partial_backbone; do
     run_experiment ${placement} ${EPSILON} ${LOG_SUFFIX}
     display_progress
 done
