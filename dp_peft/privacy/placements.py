@@ -5,12 +5,18 @@ import torch.nn as nn
 from opacus import PrivacyEngine
 from opacus.validators import ModuleValidator
 from opacus.utils import module_utils as _opacus_module_utils
+from opacus.validators import module_validator as _opacus_module_validator
 
 # PEFT+Opacus compatibility fix:
 # PEFT creates dynamic model subclasses that are unpicklable (wrong __module__).
-# Opacus's clone_module() uses torch.save/pickle internally, which fails on them.
-# Patching clone_module to use copy.deepcopy sidesteps the issue entirely.
-_opacus_module_utils.clone_module = lambda m: copy.deepcopy(m)
+# Opacus's ModuleValidator.fix() calls clone_module() which uses torch.save/pickle,
+# failing on PEFT-wrapped models.
+# Fix: patch clone_module to use copy.deepcopy on BOTH the source module AND the
+# module_validator namespace (which imports clone_module by name, so patching only
+# module_utils would have no effect on the already-bound local reference there).
+_deepcopy_clone = lambda m: copy.deepcopy(m)
+_opacus_module_utils.clone_module = _deepcopy_clone
+_opacus_module_validator.clone_module = _deepcopy_clone
 
 
 class DPPlacementStrategy(Enum):
