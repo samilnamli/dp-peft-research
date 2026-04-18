@@ -1,9 +1,21 @@
 import wandb
 import json
 import os
+import numpy as np
 from pathlib import Path
 from typing import Dict, Any, Optional
 import logging
+
+
+class _NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
 
 
 def setup_logging(
@@ -57,7 +69,7 @@ def save_results_to_json(
     Path(save_path).parent.mkdir(parents=True, exist_ok=True)
     
     with open(save_path, 'w') as f:
-        json.dump(results, f, indent=2)
+        json.dump(results, f, indent=2, cls=_NumpyEncoder)
 
 
 def load_results_from_json(load_path: str) -> Dict[str, Any]:
