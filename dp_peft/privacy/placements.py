@@ -66,8 +66,11 @@ class DPPlacement:
     def _full_dp(self):
         self.model = ModuleValidator.fix(self.model)
         
-        for param in self.model.parameters():
-            param.requires_grad = True
+        for name, param in self.model.named_parameters():
+            if 'embedding' in name.lower():
+                param.requires_grad = False
+            else:
+                param.requires_grad = True
         
         return self.model
     
