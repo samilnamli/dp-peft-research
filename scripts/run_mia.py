@@ -59,7 +59,7 @@ def main():
             batch_size=args.batch_size
         )
     
-    checkpoint = torch.load(args.checkpoint, map_location=args.device)
+    checkpoint = torch.load(args.checkpoint, map_location=args.device, weights_only=False)
     model.load_state_dict(checkpoint['model_state_dict'])
     model = model.to(args.device)
     

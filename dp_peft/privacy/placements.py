@@ -67,8 +67,7 @@ class DPPlacement:
         self.model = ModuleValidator.fix(self.model)
         
         for param in self.model.parameters():
-            if param.requires_grad:
-                param.requires_grad = True
+            param.requires_grad = True
         
         return self.model
     

@@ -16,13 +16,25 @@ def setup_logging(
     if offline:
         os.environ['WANDB_MODE'] = 'offline'
     
-    wandb.init(
-        project=project_name,
-        name=run_name,
-        config=config,
-        entity=entity,
-        reinit=True
-    )
+    try:
+        wandb.init(
+            project=project_name,
+            name=run_name,
+            config=config,
+            entity=entity,
+            reinit=True,
+            settings=wandb.Settings(init_timeout=120)
+        )
+    except Exception:
+        logging.warning("wandb online init failed; falling back to offline mode.")
+        os.environ['WANDB_MODE'] = 'offline'
+        wandb.init(
+            project=project_name,
+            name=run_name,
+            config=config,
+            entity=entity,
+            reinit=True
+        )
     
     logging.basicConfig(
         level=logging.INFO,
