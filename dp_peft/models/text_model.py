@@ -29,13 +29,20 @@ class TextModelWithPEFT(nn.Module):
         self.backbone = AutoModel.from_pretrained(model_name, config=config)
         hidden_size = config.hidden_size
 
+        # DistilBERT uses q_lin/v_lin; BERT uses query/value
+        _LORA_TARGET_MODULES = {
+            "bert-base-uncased":       ["query", "value"],
+            "distilbert-base-uncased": ["q_lin", "v_lin"],
+        }
+        _target_mods = _LORA_TARGET_MODULES.get(model_name, ["query", "value"])
+
         if peft_method == "lora":
             lora_config = LoraConfig(
                 task_type=TaskType.FEATURE_EXTRACTION,
                 r=peft_config.get("lora_r", 8),
                 lora_alpha=peft_config.get("lora_alpha", 16),
                 lora_dropout=peft_config.get("lora_dropout", 0.1),
-                target_modules=["query", "value"],
+                target_modules=_target_mods,
             )
             self.backbone = get_peft_model(self.backbone, lora_config)
 

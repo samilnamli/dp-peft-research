@@ -40,7 +40,7 @@ def main():
     
     set_seed(args.seed)
     
-    run_name = f"{args.model}_{args.dataset}_{args.placement}_eps{args.epsilon}"
+    run_name = f"{args.model}_{args.dataset}_{args.peft_method}_{args.placement}_eps{args.epsilon}"
     
     config = {
         'model': args.model,

@@ -107,17 +107,30 @@ class DPPlacement:
         
         return self.model
     
+    @staticmethod
+    def _find_transformer_layers(module):
+        """Return the list of transformer block layers for BERT and DistilBERT,
+        handling both raw models (adapter) and PEFT-wrapped models (LoRA)."""
+        # Unwrap LoRA PeftModel → base DistilBERT/BERT
+        if hasattr(module, 'base_model') and hasattr(module.base_model, 'model'):
+            module = module.base_model.model
+        # BERT: model.encoder.layer
+        if hasattr(module, 'encoder') and hasattr(module.encoder, 'layer'):
+            return list(module.encoder.layer)
+        # DistilBERT: model.transformer.layer
+        if hasattr(module, 'transformer') and hasattr(module.transformer, 'layer'):
+            return list(module.transformer.layer)
+        # Fallback: direct .layer attribute
+        if hasattr(module, 'layer'):
+            return list(module.layer)
+        return []
+
     def _partial_backbone_dp(self):
         self.model = ModuleValidator.fix(self.model)
-        
+
         if hasattr(self.model, 'backbone'):
-            if hasattr(self.model.backbone, 'encoder'):
-                layers = self.model.backbone.encoder.layer
-            elif hasattr(self.model.backbone, 'layer'):
-                layers = self.model.backbone.layer
-            else:
-                layers = []
-            
+            layers = self._find_transformer_layers(self.model.backbone)
+
             total_layers = len(layers)
             trainable_layer_indices = list(range(total_layers - self.top_k_layers, total_layers))
             
