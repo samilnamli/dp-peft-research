@@ -1,0 +1,13 @@
+# DP-PEFT Experiment Progress
+# Format: placement,epsilon,status,timestamp
+# Status: pending, running, completed, failed
+adapter_only,8.0,completed,20260417_221544
+head_adapter,8.0,completed,20260417_233323
+last_layer,8.0,completed,20260418_001707
+full_dp,8.0,completed,20260418_234342
+partial_backbone,8.0,completed,20260418_032410
+adapter_only,1.0,completed,20260418_044141
+head_adapter,1.0,completed,20260418_055858
+last_layer,1.0,completed,20260418_064331
+full_dp,1.0,completed,20260419_054650
+partial_backbone,1.0,completed,20260418_155524

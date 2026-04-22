@@ -1,0 +1,29 @@
+DP-PEFT Text Experiments - Final Summary
+=========================================
+
+Completed: Sun Apr 19 05:49:08 UTC 2026
+Duration: 12h 7m
+
+Configuration:
+- Model: bert
+- Dataset: agnews
+- Batch Size: 64
+- Epochs: 20
+- Learning Rate: 5e-4
+
+Experiments Completed:
+11 / 10
+
+Results Location: /workspace/dp-peft-research/results
+Checkpoints Location: /workspace/dp-peft-research/checkpoints
+Progress File: /workspace/dp-peft-research/results/progress.txt
+
+GPU Info:
+NVIDIA L40S, 46068 MiB
+
+Next Steps:
+1. Download results: tar -czf results_text.tar.gz results/ checkpoints/
+2. Transfer to local: scp runpod:/workspace/dp-peft-research/results_text.tar.gz ./
+3. Run analysis: jupyter notebook notebooks/results_analysis.ipynb
+
+=========================================

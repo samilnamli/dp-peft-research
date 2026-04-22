@@ -1,0 +1,28 @@
+========================================
+DP-PEFT Experiment Report
+========================================
+
+Placement: full_dp
+Epsilon: 1.0
+Completed: Sun Apr 19 05:46:50 UTC 2026
+
+Configuration:
+- Model: bert
+- Dataset: agnews
+- Batch Size: 64
+- Epochs: 20
+- Learning Rate: 5e-4
+
+GPU Info:
+NVIDIA L40S, 46068 MiB, 0 MiB
+
+Results File:
+/workspace/dp-peft-research/results/bert_agnews_full_dp_eps1.0.json
+
+Checkpoint:
+/workspace/dp-peft-research/checkpoints/bert_agnews_full_dp_eps1.0.pt
+
+Overall Progress:
+11 / 12 experiments completed
+
+========================================
