@@ -1,0 +1,10 @@
+{
+  "threshold_attack": {
+    "auc": 0.5024999172149123,
+    "advantage": 0.011077631578947367,
+    "train_loss_mean": 1.3698197603225708,
+    "train_loss_std": 3.5926921367645264,
+    "test_loss_mean": 1.378441572189331,
+    "test_loss_std": 3.5934011936187744
+  }
+}
