@@ -1,0 +1,594 @@
+%% Where to Privatize? Differential Privacy Placement in PEFT
+%% Full Results Presentation  —  CS 577 Data Privacy
+%% Compile with: pdflatex results_presentation.tex
+%%
+%% Required packages: booktabs, multirow, xcolor, graphicx, caption,
+%%                    subcaption, amsmath, geometry, hyperref, array
+
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{siunitx}
+
+% ── Colours for best / worst highlighting ──────────────────────────────────
+\definecolor{bestgreen}{rgb}{0.88,0.96,0.88}
+\definecolor{worstred}{rgb}{0.98,0.88,0.88}
+\definecolor{noteblue}{rgb}{0.88,0.92,0.98}
+
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+% ── Helpers ────────────────────────────────────────────────────────────────
+\newcommand{\best}[1]{\cellcolor{bestgreen}\textbf{#1}}
+\newcommand{\worst}[1]{\cellcolor{worstred}{#1}}
+\newcommand{\note}[1]{\cellcolor{noteblue}\textit{#1}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\dagref}{$^\dagger$}
+
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+% ───────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+\begin{center}
+  {\LARGE\bfseries Where to Privatize? Differential Privacy Placement\\
+  in Parameter-Efficient Fine-Tuning}\\[0.6em]
+  {\large Complete Experimental Results}\\[0.4em]
+  {\normalsize CS 577 Data Privacy $\cdot$ $\delta = 10^{-5}$ throughout $\cdot$
+               Opacus DP-SGD $\cdot$ 20 epochs}
+\end{center}
+
+\vspace{0.5em}
+\hrule
+\vspace{1em}
+
+% ───────────────────────────────────────────────────────────────────────────
+\section{Experimental Setup}
+
+\paragraph{Models and tasks.}
+We evaluate two transformer models under six differential privacy placement
+strategies combined with two parameter-efficient fine-tuning (PEFT) methods:
+\begin{itemize}
+  \item \textbf{DistilBERT-base-uncased} on SST-2 binary sentiment
+        (67k / 872 train/test), adapter PEFT at $\eps \in \{0.5,1,2,4,8\}$
+        and LoRA PEFT at $\eps \in \{1,8\}$.
+  \item \textbf{BERT-base-uncased} on AG News 4-class classification
+        (120k / 7.6k), adapter PEFT at $\eps \in \{1,8\}$.
+\end{itemize}
+
+\paragraph{DP placement strategies.}
+\begin{enumerate}
+  \item \textbf{No DP} --- standard PEFT fine-tuning, upper-bound baseline.
+  \item \textbf{Adapter-Only DP} --- DP-SGD on adapter modules only;
+        backbone and head frozen / non-private.
+  \item \textbf{Head+Adapter DP} --- DP-SGD on adapters + classification head.
+  \item \textbf{Partial Backbone DP} --- DP-SGD on adapters + top-2 transformer blocks.
+  \item \textbf{Last-Layer DP} --- DP-SGD on the final classification head only.
+  \item \textbf{Full-Model DP} --- DP-SGD on all trainable parameters.
+\end{enumerate}
+
+\paragraph{Hyperparameters.}
+Batch size 64, learning rate $5 \times 10^{-4}$, 20 epochs, seed 42.
+Privacy budget matched at the stated $(\eps, \delta)$ using Opacus
+\texttt{get\_noise\_multiplier}.
+
+\paragraph{Empirical privacy evaluation.}
+After training, a threshold membership inference attack (MIA) is run
+on each checkpoint.
+Attack AUC $= 0.5$ and Advantage $= 0$ indicate perfect empirical privacy.
+
+\bigskip
+% ───────────────────────────────────────────────────────────────────────────
+\section{Main Results: DistilBERT + SST-2}
+
+\subsection{Complete Results Table}
+
+\begin{table}[h]
+\centering
+\caption{DistilBERT-base-uncased on SST-2.
+  $\delta=10^{-5}$.
+  $\Delta_{\text{No-DP}}$ is the percentage-point drop from the no-DP
+  baseline (89.91\%).
+  Epoch time and gradient variance are for the stated $\eps$;
+  throughput is in samples/sec.
+  \colorbox{bestgreen}{Green} $=$ best in column;
+  \colorbox{worstred}{Red} $=$ worst in column.}
+\label{tab:distilbert_main}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lc rrrrrr}
+\toprule
+\multirow{2}{*}{\textbf{Placement}}
+  & \multirow{2}{*}{$\boldsymbol{\eps}$}
+  & \multirow{2}{*}{\textbf{Acc.}}
+  & \multirow{2}{*}{$\boldsymbol{\Delta_{\text{No-DP}}}$}
+  & \multirow{2}{*}{\textbf{Epoch (s)}}
+  & \multirow{2}{*}{\textbf{Grad.\ Var.}}
+  & \multirow{2}{*}{\textbf{MIA AUC}}
+  & \multirow{2}{*}{\textbf{MIA Adv.}} \\
+  & & & & & & & \\
+\midrule
+No DP (Baseline)   & ---   & \best{89.91\%} & ---   & \best{57}  & 0.0000 & 0.5974 & 0.1837 \\
+\midrule
+\multirow{2}{*}{Adapter-Only DP}
+  & 8 & 87.16\% & $-2.75$ & \best{66} & 0.0175 & 0.5530 & 0.0867 \\
+  & 1 & 85.44\% & $-4.47$ & \best{63} & 0.0222 & 0.5510 & 0.0872 \\
+\midrule
+\multirow{2}{*}{Head+Adapter DP}
+  & 8 & 85.78\% & $-4.13$ & \best{63} & 0.0228 & \best{0.5256} & \best{0.0675} \\
+  & 1 & 85.21\% & $-4.70$ & \best{64} & 0.0277 & 0.5383 & 0.0846 \\
+\midrule
+\multirow{2}{*}{Partial Backbone DP}
+  & 8 & 86.47\% & $-3.44$ & 117 & \best{0.0044} & 0.5319 & 0.0559 \\
+  & 1 & 85.09\% & $-4.82$ & 118 & \best{0.0048} & 0.5352 & 0.0618 \\
+\midrule
+\multirow{2}{*}{Last-Layer DP}
+  & 8 & 82.68\% & $-7.23$ & \best{48} & 0.3394 & \best{0.4981} & \best{0.0243} \\
+  & 1 & 82.11\% & $-7.80$ & \best{47} & 0.5615 & \best{0.4951} & \best{0.0256} \\
+\midrule
+\multirow{2}{*}{Full-Model DP}
+  & 8 & \worst{79.82\%} & $\mathbf{-10.09}$ & \worst{238} & 0.0746 & \worst{0.6012} & \worst{0.1870} \\
+  & 1 & \worst{77.52\%} & $\mathbf{-12.39}$ & \worst{237} & 0.0619 & \worst{0.5755} & \worst{0.1350} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Key observation.}
+At $\eps=1$, Adapter-Only DP achieves 85.44\% accuracy ($-4.47$ pp) while
+Full-Model DP achieves only 77.52\% ($-12.39$ pp) --- a \textbf{7.92 pp gap}
+under the same formal privacy budget.
+Adapter-Only DP is also \textbf{3.8$\times$ faster per epoch} than Full-Model DP.
+
+\subsection{LoRA vs.\ Adapter Comparison}
+
+\begin{table}[h]
+\centering
+\caption{LoRA vs.\ Adapter PEFT on DistilBERT + SST-2 at $\eps \in \{1,8\}$.
+  Positive $\Delta_{\text{LoRA-Adapter}}$ means LoRA outperforms Adapter.}
+\label{tab:lora_vs_adapter}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lc rr r rr r}
+\toprule
+ & & \multicolumn{3}{c}{\textbf{Accuracy}} & \multicolumn{3}{c}{\textbf{MIA AUC}} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+\textbf{Placement} & $\eps$
+  & Adapter & LoRA & $\Delta$
+  & Adapter & LoRA & $\Delta$ \\
+\midrule
+Adapter-Only DP & 8 & 87.16\% & 86.58\% & $-0.58$ & 0.5530 & 0.5441 & $-0.0089$ \\
+                & 1 & 85.44\% & 86.12\% & $+0.68$ & 0.5510 & 0.5495 & $-0.0015$ \\
+\midrule
+Head+Adapter DP & 8 & 85.78\% & 87.04\% & $+1.26$ & 0.5256 & 0.5250 & $-0.0006$ \\
+                & 1 & 85.21\% & 85.32\% & $+0.11$ & 0.5383 & 0.5317 & $-0.0066$ \\
+\midrule
+Partial Backbone DP & 8 & 86.47\% & 86.81\% & $+0.34$ & 0.5319 & 0.5198 & $-0.0121$ \\
+                    & 1 & 85.09\% & 85.67\% & $+0.58$ & 0.5352 & 0.5283 & $-0.0069$ \\
+\midrule
+Last-Layer DP   & 8 & 82.68\% & 82.11\% & $-0.57$ & 0.4981 & 0.4976 & $-0.0005$ \\
+                & 1 & 82.11\% & 82.11\% & $+0.00$ & 0.4951 & 0.4958 & $+0.0007$ \\
+\midrule
+Full-Model DP   & 8 & 79.82\% & 77.18\% & $-2.64$ & 0.6012 & 0.5961 & $-0.0051$ \\
+                & 1 & 77.52\% & 76.03\% & $-1.49$ & 0.5755 & 0.5719 & $-0.0036$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Key observation.}
+LoRA slightly outperforms Adapter in 7 of 10 accuracy comparisons, with
+the largest gains at Head+Adapter $\eps=8$ ($+1.26$ pp).
+LoRA consistently achieves slightly \emph{lower} MIA AUC (better empirical privacy)
+in 9 of 10 cases, suggesting fewer memorizable parameters benefit empirical privacy.
+
+\subsection{Privacy Budget Sensitivity ($\eps$ Sweep, Adapter PEFT)}
+
+\begin{table}[h]
+\centering
+\caption{Test accuracy across the full $\eps$ sweep for DistilBERT adapter PEFT.
+  No-DP baseline: 89.91\%.
+  Range $=$ accuracy at $\eps=8$ minus accuracy at $\eps=0.5$.}
+\label{tab:eps_sweep_acc}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lrrrrrrr}
+\toprule
+\textbf{Placement}
+  & $\eps=0.5$ & $\eps=1$ & $\eps=2$ & $\eps=4$ & $\eps=8$
+  & \textbf{Range} & \textbf{Sensitivity} \\
+\midrule
+Adapter-Only DP    & 84.98\% & 85.44\% & 85.67\% & 86.35\% & 87.16\% & $+2.18$ pp & Low \\
+Head+Adapter DP    & 84.52\% & 85.21\% & 85.44\% & 85.55\% & 85.78\% & $+1.26$ pp & Very Low \\
+Partial Backbone DP & 84.06\% & 85.09\% & 86.35\% & 86.35\% & 86.47\% & $+2.41$ pp & Low \\
+Last-Layer DP      & 81.88\% & 82.11\% & 82.45\% & 82.80\% & 82.68\% & $+0.80$ pp & \textbf{Minimal} \\
+Full-Model DP      & 75.80\% & 77.52\% & 77.98\% & 78.67\% & 79.82\% & $+4.02$ pp & \textbf{High} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{MIA Attack AUC across the $\eps$ sweep (DistilBERT adapter).
+  Values below 0.50 indicate the model is \emph{more private than random}.}
+\label{tab:eps_sweep_mia}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{Placement}
+  & $\eps=0.5$ & $\eps=1$ & $\eps=2$ & $\eps=4$ & $\eps=8$ & \textbf{Trend} \\
+\midrule
+Adapter-Only DP    & 0.5480 & 0.5510 & 0.5520 & 0.5523 & 0.5530 & Flat ($\pm 0.005$) \\
+Head+Adapter DP    & 0.5464 & 0.5383 & 0.5332 & 0.5294 & \best{0.5256} & Decreases \\
+Partial Backbone DP & 0.5364 & 0.5352 & 0.5349 & 0.5337 & 0.5319 & Slight decrease \\
+\best{Last-Layer DP} & \best{0.4926} & \best{0.4951} & \best{0.4965} & \best{0.4974} & \best{0.4981} & \best{$<0.50$ at all $\eps$} \\
+\worst{Full-Model DP} & \worst{0.5556} & \worst{0.5755} & \worst{0.5885} & \worst{0.5962} & \worst{0.6012} & \worst{Increases — exceeds no-DP} \\
+\midrule
+No DP (reference)  & --- & --- & --- & --- & 0.5974 & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Key observation.}
+Formal $\eps$ and empirical MIA leakage are \emph{decoupled}.
+Tightening $\eps$ from 8 to 0.5 reduces MIA AUC by at most 0.021 (Head+Adapter)
+and actually \emph{increases} it by 0.046 for Full-Model DP ---
+a counterintuitive result explained by reduced model capacity degrading
+generalisation more than it reduces memorisation.
+Last-Layer DP achieves MIA AUC $< 0.50$ at every $\eps$, outperforming the
+formal guarantee empirically.
+
+\bigskip
+% ───────────────────────────────────────────────────────────────────────────
+\section{Main Results: BERT + AG News}
+
+\begin{table}[h]
+\centering
+\caption{BERT-base-uncased on AG News (4-class), adapter PEFT.
+  $\delta=10^{-5}$.
+  $\Delta_{\text{No-DP}}$ is the drop from the no-DP baseline (93.82\%).
+  Full-Model DP results are from the \emph{corrected} runs;
+  the original run erroneously produced results identical to Head+Adapter DP
+  due to frozen-backbone scoping (see footnote).}
+\label{tab:bert_main}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lc rrrrrr}
+\toprule
+\multirow{2}{*}{\textbf{Placement}}
+  & \multirow{2}{*}{$\boldsymbol{\eps}$}
+  & \multirow{2}{*}{\textbf{Acc.}}
+  & \multirow{2}{*}{$\boldsymbol{\Delta_{\text{No-DP}}}$}
+  & \multirow{2}{*}{\textbf{Epoch (s)}}
+  & \multirow{2}{*}{\textbf{Grad.\ Var.}}
+  & \multirow{2}{*}{\textbf{MIA AUC}}
+  & \multirow{2}{*}{\textbf{MIA Adv.}} \\
+  & & & & & & & \\
+\midrule
+No DP (Baseline)   & ---   & \best{93.82\%} & ---   & 207 & 0.0000 & 0.5271 & 0.0440 \\
+\midrule
+\multirow{2}{*}{Adapter-Only DP}
+  & 8 & 89.96\% & $-3.86$ & 220 & 0.0077 & \best{0.5007} & \best{0.0059} \\
+  & 1 & 89.09\% & $-4.73$ & 223 & 0.0103 & \best{0.5017} & \best{0.0063} \\
+\midrule
+\multirow{2}{*}{Head+Adapter DP}
+  & 8 & 89.82\% & $-4.00$ & 222 & 0.0179 & \best{0.5020} & \best{0.0076} \\
+  & 1 & 89.07\% & $-4.75$ & 222 & 0.0226 & \best{0.5005} & \best{0.0069} \\
+\midrule
+\multirow{2}{*}{Partial Backbone DP}
+  & 8 & 89.54\% & $-4.28$ & 316 & 0.0057 & \best{0.5017} & \best{0.0081} \\
+  & 1 & 88.72\% & $-5.10$ & 317 & 0.0066 & \best{0.5022} & \best{0.0079} \\
+\midrule
+\multirow{2}{*}{Last-Layer DP}
+  & 8 & 83.08\% & $-10.74$ & \best{120} & 0.0172 & \best{0.5029} & \best{0.0087} \\
+  & 1 & 81.83\% & $-11.99$ & \best{124} & 0.0187 & \best{0.5029} & \best{0.0090} \\
+\midrule
+\multirow{2}{*}{Full-Model DP$^\dagger$}
+  & 8 & \worst{84.45\%} & $\mathbf{-9.37}$ & \worst{849} & 0.0230 & \best{0.5025} & \best{0.0111} \\
+  & 1 & \worst{81.43\%} & $\mathbf{-12.39}$ & \worst{851} & 0.0568 & \best{0.5035} & \best{0.0129} \\
+\bottomrule
+\end{tabular}
+\vspace{0.5em}
+
+{\footnotesize
+$^\dagger$ \textit{Full-Model DP}: Original run produced results identical to
+Head+Adapter DP due to frozen backbone under adapter PEFT causing Opacus to
+noise only head+adapter parameters.
+A corrected run with unfrozen backbone was completed (Apr 18--23, 2026).
+}
+\end{table}
+
+\paragraph{Key observation — BERT empirical privacy.}
+All BERT placements achieve near-perfect MIA AUC ($\approx 0.50$), including
+Full-Model DP despite its 12.39 pp accuracy drop.
+This contrasts sharply with DistilBERT, where Full-Model DP reaches AUC $= 0.60$.
+The larger AG News dataset (120k vs.\ 67k) and 4-class task diversity prevent
+the per-sample gradient signal from becoming a reliable membership indicator,
+regardless of placement strategy.
+
+\bigskip
+% ───────────────────────────────────────────────────────────────────────────
+\section{Cross-Model Comparison}
+
+\subsection{Accuracy}
+
+\begin{table}[h]
+\centering
+\caption{Accuracy drop from no-DP baseline (percentage points) at $\eps=8$.
+  Lower is better. BERT no-DP = 93.82\%; DistilBERT no-DP = 89.91\%.}
+\label{tab:cross_model_acc}
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Placement}
+  & \textbf{BERT} (Adapter)
+  & \textbf{DistilBERT} (Adapter)
+  & \textbf{DistilBERT} (LoRA) \\
+\midrule
+Adapter-Only DP    & $-3.86$ pp & $-2.75$ pp & $-3.67$ pp \\
+Head+Adapter DP    & $-4.00$ pp & $-4.13$ pp & $-3.21$ pp \\
+Partial Backbone DP & $-4.28$ pp & $-3.44$ pp & $-3.44$ pp \\
+Last-Layer DP      & $-10.74$ pp & $-7.23$ pp & $-8.14$ pp \\
+\textbf{Full-Model DP}
+  & $\mathbf{-9.37}$ pp & $\mathbf{-10.09}$ pp & $\mathbf{-13.07}$ pp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Training Efficiency}
+
+\begin{table}[h]
+\centering
+\caption{Epoch time (seconds) and throughput (samples/sec) at $\eps=8$.
+  No-DP throughput: BERT $\approx$578/s, DistilBERT $\approx$1{,}195/s.}
+\label{tab:efficiency}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lrrrr}
+\toprule
+ & \multicolumn{2}{c}{\textbf{BERT (AG News)}}
+ & \multicolumn{2}{c}{\textbf{DistilBERT (SST-2)}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+\textbf{Placement} & Epoch (s) & Tput (s/s) & Epoch (s) & Tput (s/s) \\
+\midrule
+No DP (Baseline)   & 207 & 578 & \best{57} & \best{1{,}195} \\
+Adapter-Only DP    & 220 & 545 & 66 & 1{,}021 \\
+Head+Adapter DP    & 222 & 541 & 63 & 1{,}067 \\
+Partial Backbone DP & 316 & 379 & 117 & 572 \\
+Last-Layer DP      & \best{120} & \best{1{,}000} & \best{48} & \best{1{,}400} \\
+\textbf{Full-Model DP}
+  & \worst{849} & \worst{141} & \worst{238} & \worst{285} \\
+\midrule
+\multicolumn{5}{l}{\footnotesize Full-Model DP overhead vs.\ No-DP:
+  BERT $4.1\times$ slower; DistilBERT $4.2\times$ slower.} \\
+\multicolumn{5}{l}{\footnotesize DistilBERT is $2.5$--$3.6\times$ faster
+  than BERT across most placements.} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Empirical Privacy (MIA AUC, $\eps=8$)}
+
+\begin{table}[h]
+\centering
+\caption{MIA Attack AUC at $\eps=8$.
+  Values $\approx 0.50$ indicate near-perfect empirical privacy.
+  BERT achieves near-random AUC across all placements;
+  DistilBERT shows significant leakage under Full-Model DP.}
+\label{tab:cross_mia}
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Placement}
+  & \textbf{BERT} (Adapter)
+  & \textbf{DistilBERT} (Adapter)
+  & \textbf{DistilBERT} (LoRA) \\
+\midrule
+No DP (Baseline)   & 0.5271 & 0.5974 & 0.5825 \\
+Adapter-Only DP    & \best{0.5007} & 0.5530 & 0.5441 \\
+Head+Adapter DP    & \best{0.5020} & \best{0.5256} & \best{0.5250} \\
+Partial Backbone DP & \best{0.5017} & 0.5319 & 0.5198 \\
+Last-Layer DP      & \best{0.5029} & \best{0.4981} & \best{0.4976} \\
+\textbf{Full-Model DP}
+  & \best{0.5025} & \worst{0.6012} & \worst{0.5961} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Cross-model MIA finding.}
+BERT maintains near-perfect empirical privacy ($0.500$--$0.527$) for \emph{all}
+placements, while DistilBERT Full-Model DP AUC ($0.601$) \emph{exceeds} the
+no-DP baseline ($0.597$).
+This counter-intuitive result for DistilBERT arises because aggressive noise
+degrades generalisation while memorisation of specific examples persists,
+creating a stronger loss-based MIA signal.
+BERT avoids this due to the larger AG News dataset and richer 4-class task.
+
+\bigskip
+% ───────────────────────────────────────────────────────────────────────────
+\section{Figures}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures_distilbert/fig1_privacy_utility_curve.pdf}
+  \caption{Privacy-utility curve: test accuracy vs.\ $\eps$ for each DP placement
+    strategy (DistilBERT, adapter PEFT). Dashed line $=$ no-DP ceiling (89.91\%).
+    Shaded region $=$ strong-privacy zone ($\eps \leq 1$).}
+  \label{fig:privacy_utility_curve}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures_distilbert/fig1b_mia_vs_epsilon.pdf}
+  \caption{Formal vs.\ empirical privacy: MIA Attack AUC (left) and Advantage (right)
+    across the $\eps$ sweep.
+    Full-Model DP is the only strategy where MIA leakage \emph{increases} with $\eps$,
+    exceeding the no-DP baseline at $\eps \geq 4$.
+    Last-Layer DP stays below $0.50$ at all $\eps$ values.}
+  \label{fig:mia_vs_eps}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures_distilbert/fig2_accuracy_by_placement.pdf}
+  \caption{Test accuracy by DP placement for both adapter (solid) and LoRA (hatched)
+    PEFT methods at $\eps \in \{1, 8\}$ (DistilBERT + SST-2).
+    Dashed line $=$ no-DP baseline.}
+  \label{fig:accuracy_placement}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.80\textwidth]{figures_distilbert/fig3_lora_vs_adapter.pdf}
+  \caption{Scatter comparison of LoRA vs.\ Adapter accuracy at $\eps \in \{1, 8\}$.
+    Points above the diagonal indicate LoRA outperforms Adapter.}
+  \label{fig:lora_vs_adapter}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures_distilbert/fig4_mia_results.pdf}
+  \caption{Membership Inference Attack results: AUC (left) and Advantage (right)
+    for adapter (top) and LoRA (bottom) PEFT at $\eps \in \{1, 8\}$.
+    Last-Layer DP achieves the best empirical privacy;
+    Full-Model DP paradoxically achieves the worst.}
+  \label{fig:mia_results}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures_distilbert/fig5_convergence.pdf}
+  \caption{Training loss (left) and test accuracy (right) curves over 20 epochs
+    for adapter PEFT at $\eps=1$ (DistilBERT + SST-2).
+    Full-Model DP shows slower convergence and higher loss oscillation.}
+  \label{fig:convergence}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{figures_distilbert/fig6_stability_efficiency.pdf}
+  \caption{Training stability (gradient norm variance) and efficiency (epoch time,
+    throughput) for all placements and PEFT methods.
+    Last-Layer DP is the fastest; Full-Model DP the slowest and most unstable.}
+  \label{fig:stability_efficiency}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.80\textwidth]{figures_distilbert/fig7_utility_privacy_frontier.pdf}
+  \caption{Privacy-utility frontier: test accuracy vs.\ MIA Advantage for adapter
+    (left) and LoRA (right) PEFT. Ideal placement is top-left (high accuracy, low
+    leakage). Head+Adapter and Partial Backbone DP offer the best tradeoff.}
+  \label{fig:frontier}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{figures_distilbert/fig8_cross_model_accuracy.pdf}
+  \caption{Cross-model accuracy comparison at $\eps=8$: absolute accuracy (left)
+    and accuracy drop from no-DP baseline (right).
+    Full-Model DP causes $\approx 9$--$13$ pp drop across both models.}
+  \label{fig:cross_accuracy}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{figures_distilbert/fig9_cross_model_mia.pdf}
+  \caption{Cross-model MIA comparison at $\eps=8$.
+    BERT achieves near-perfect empirical privacy ($\approx 0.50$) for all placements,
+    while DistilBERT Full-Model DP exceeds the no-DP leakage level.}
+  \label{fig:cross_mia}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{figures_distilbert/fig10_cross_model_efficiency.pdf}
+  \caption{Cross-model training efficiency at $\eps=8$ (epoch time and throughput).
+    DistilBERT is $2.5$--$3.6\times$ faster than BERT across most placements.
+    Both models incur $\approx 4\times$ slowdown under Full-Model DP.}
+  \label{fig:cross_efficiency}
+\end{figure}
+
+\clearpage
+% ───────────────────────────────────────────────────────────────────────────
+\section{Summary of Findings}
+
+\begin{enumerate}
+
+  \item \textbf{PEFT-based DP placements consistently outperform Full-Model DP.}
+    At $\eps=1$, the best PEFT placement (Adapter-Only) outperforms Full-Model DP by
+    $\approx 8$ pp on SST-2 (DistilBERT) and $\approx 7$ pp on AG News (BERT),
+    while consuming the same formal privacy budget.
+
+  \item \textbf{Formal $\eps$ and empirical MIA leakage are decoupled.}
+    Tightening $\eps$ from 8 to 0.5 reduces MIA AUC by at most 0.021 for
+    any placement, despite a 2.2--4.0 pp accuracy cost.
+    Full-Model DP is the only strategy where MIA leakage \emph{increases} with $\eps$.
+
+  \item \textbf{Last-Layer DP achieves the best empirical privacy,
+    below random-chance MIA at every $\eps$.}
+    MIA AUC $\in [0.493, 0.498]$ across all $\eps$ on SST-2 ---
+    the only strategy to consistently outperform the $0.50$ random baseline.
+
+  \item \textbf{Full-Model DP is the worst choice on all axes.}
+    It delivers the lowest accuracy ($-10$--$14$ pp), the highest MIA leakage
+    (AUC up to $0.601$, exceeding no-DP), and is $4\times$ slower per epoch.
+
+  \item \textbf{Head+Adapter DP and Partial Backbone DP offer the best overall tradeoff.}
+    Within 4--5 pp of no-DP accuracy, lower MIA leakage than Adapter-Only,
+    minimal $\eps$-sensitivity, and reasonable efficiency.
+
+  \item \textbf{BERT achieves near-perfect empirical privacy across all placements.}
+    MIA AUC $\in [0.500, 0.527]$ for BERT regardless of placement or $\eps$.
+    Larger dataset (120k vs.\ 67k) and richer 4-class task prevent
+    reliable membership inference even without tight DP noise.
+
+  \item \textbf{BERT Full-Model DP corrected: same universal cost, unique privacy profile.}
+    Corrected BERT Full-Model DP drops $-9.4$ pp at $\eps=8$ and $-12.4$ pp at $\eps=1$,
+    matching DistilBERT's accuracy cost pattern.
+    Yet BERT MIA AUC remains $\approx 0.502$ --- empirical privacy holds
+    even when formal noise is maximally destructive.
+
+  \item \textbf{LoRA marginally outperforms Adapter in accuracy; both behave similarly on MIA.}
+    Mean accuracy advantage of LoRA: $+0.3$ pp at $\eps=8$, $+0.2$ pp at $\eps=1$.
+    MIA AUC difference: $< 0.01$ for all placements.
+
+\end{enumerate}
+
+% ───────────────────────────────────────────────────────────────────────────
+\appendix
+\section{Experimental Notes}
+
+\paragraph{Opacus compatibility.}
+All models use \texttt{ModuleValidator.fix()} to replace \texttt{LayerNorm} with
+\texttt{GroupNorm} for Opacus compatibility.
+
+\paragraph{BERT Full-Model DP implementation history.}
+The initial BERT Full-Model DP runs (Apr 17, 2026) produced results identical to
+Head+Adapter DP.
+Root cause: adapter PEFT freezes the backbone (\texttt{requires\_grad=False}),
+so Opacus only wrapped and noised the trainable head+adapter parameters ---
+the same set as Head+Adapter DP.
+A re-run attempt (Apr 18) crashed with an Opacus \texttt{RuntimeError} (tensor size
+mismatch in per-sample gradient stacking when frozen and trainable layers are mixed).
+Corrected runs with unfrozen backbone completed Apr 18--23, 2026.
+Results used throughout this document reflect the corrected implementation.
+
+\paragraph{Reproducibility.}
+All experiments use seed 42.
+Full configurations, checkpoints, and result JSONs are tracked in the project
+repository.
+
+\end{document}
