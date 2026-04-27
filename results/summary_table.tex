@@ -1,22 +1,115 @@
+%% Experimental Summary Tables — "Where to Privatize?" (CS 577)
+%% Compile with: pdflatex summary_table.tex
+%%
+%% Produces two tables:
+%%   Table I  — Experimental setup (matching reference image style)
+%%   Table II — Key results summary (accuracy + MIA at ε∈{1,8})
+
+\documentclass[10pt,letterpaper]{article}
+\usepackage[margin=0.9in]{geometry}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{amsmath}
+\usepackage{caption}
+
+\definecolor{bestgreen}{rgb}{0.88,0.96,0.88}
+\definecolor{worstred}{rgb}{0.98,0.88,0.88}
+\newcommand{\best}[1]{\cellcolor{bestgreen}\textbf{#1}}
+\newcommand{\worst}[1]{\cellcolor{worstred}{#1}}
+
+\begin{document}
+
+% ── TABLE I: Experimental Setup ─────────────────────────────────────────────
 \begin{table}[h]
 \centering
-\caption{Results: BERT-base on AG News. $\delta=10^{-5}$ for all DP runs.}
-\label{tab:main_results}
-\begin{tabular}{llcccccc}
+\caption{Experimental setup for both branches. $\delta = 10^{-5}$ throughout.}
+\label{tab:setup}
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{l l l l}
 \hline
-Placement & $\varepsilon$ & Accuracy & $\Delta$ No-DP & Epoch (s) & Grad. Var. & MIA AUC & MIA Adv. \\
+\textbf{Parameter} & \textbf{Description}
+  & \textbf{Branch I — BERT} & \textbf{Branch II — DistilBERT} \\
 \hline
-No DP (Baseline) & — & 0.9382 & -0.000 & 207 & 0.0000 & 0.5271 & 0.0745 \\
-Adapter-Only DP & 8 & 0.8996 & -0.039 & 220 & 0.0077 & 0.5007 & 0.0059 \\
-Adapter-Only DP & 1 & 0.8909 & -0.047 & 223 & 0.0103 & 0.5017 & 0.0063 \\
-Head+Adapter DP & 8 & 0.8982 & -0.040 & 222 & 0.0179 & 0.5020 & 0.0076 \\
-Head+Adapter DP & 1 & 0.8907 & -0.047 & 222 & 0.0226 & 0.5005 & 0.0069 \\
-Partial Backbone DP & 8 & 0.8954 & -0.043 & 316 & 0.0057 & 0.5017 & 0.0081 \\
-Partial Backbone DP & 1 & 0.8872 & -0.051 & 317 & 0.0066 & 0.5022 & 0.0079 \\
-Last-Layer DP & 8 & 0.8308 & -0.107 & 120 & 0.0172 & 0.5029 & 0.0087 \\
-Last-Layer DP & 1 & 0.8183 & -0.120 & 124 & 0.0187 & 0.5029 & 0.0090 \\
-Full-Model DP & 8 & — & — & — & — & 0.5025 & 0.0111 \\
-Full-Model DP & 1 & 0.8143 & -0.124 & 851 & 0.0568 & 0.5035 & 0.0129 \\
+Backbone          & Pre-trained model
+  & \texttt{bert-base-uncased} (110M) & \texttt{distilbert-base-uncased} (66M) \\
+Dataset           & Fine-tuning corpus
+  & AG News (4-class, 120k train) & SST-2 (binary, 67k train) \\
+PEFT method       & Adapter type
+  & Houlsby adapters & Houlsby adapters; LoRA \\
+DP placements     & Strategies evaluated
+  & 6 (no\_dp $\to$ full\_dp) & 6 (no\_dp $\to$ full\_dp) \\
+Privacy budget $\varepsilon$ & Formal DP budget
+  & $\{1,\,8\}$ & $\{0.5,\,1,\,2,\,4,\,8\}$ \\
+Privacy budget $\delta$ & Failure probability
+  & $10^{-5}$ & $10^{-5}$ \\
+DP mechanism      & Algorithm
+  & DP-SGD (Opacus) & DP-SGD (Opacus) \\
+Trainable params  & Under adapter PEFT
+  & Head + adapters ($\sim$3M) & Head + adapters ($\sim$1.5M) \\
+Epochs            & Training duration        & 20 & 20 \\
+Batch size        & Mini-batch size          & 64 & 64 \\
+Learning rate     & Optimiser step size      & $5\times10^{-4}$ & $5\times10^{-4}$ \\
+Optimiser         & Gradient method          & AdamW (Opacus) & AdamW (Opacus) \\
+Seed              & Reproducibility          & 42 & 42 \\
+No-DP baseline    & Upper-bound accuracy     & 93.82\% & 89.91\% \\
 \hline
 \end{tabular}
 \end{table}
+
+\bigskip
+
+% ── TABLE II: Key Results Summary ───────────────────────────────────────────
+\begin{table}[h]
+\centering
+\caption{Key results summary. Accuracy and MIA AUC at $\varepsilon \in \{1, 8\}$,
+  adapter PEFT. $\Delta$ = accuracy drop from no-DP baseline (pp).
+  MIA AUC $\approx 0.50$ = perfect empirical privacy.
+  \colorbox{bestgreen}{Green} = best; \colorbox{worstred}{Red} = worst.}
+\label{tab:results_summary}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{l cc cc cc cc}
+\hline
+ & \multicolumn{4}{c}{\textbf{Branch I — BERT (AG News)}}
+ & \multicolumn{4}{c}{\textbf{Branch II — DistilBERT (SST-2)}} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+\textbf{Placement}
+  & Acc$_{\varepsilon=8}$ & $\Delta$ & MIA$_{\varepsilon=8}$
+  & Acc$_{\varepsilon=1}$ & Acc$_{\varepsilon=8}$ & $\Delta$
+  & MIA$_{\varepsilon=8}$ & Acc$_{\varepsilon=1}$ \\
+\hline
+No DP (Baseline)
+  & 93.82\% & --- & 0.527
+  & 93.82\% & 89.91\% & --- & 0.597 & 89.91\% \\
+\hline
+Adapter-Only DP
+  & \best{89.96\%} & $-3.9$ & \best{0.501}
+  & 89.09\% & \best{87.16\%} & $-2.8$ & 0.553 & 85.44\% \\
+Head+Adapter DP
+  & 89.82\% & $-4.0$ & \best{0.502}
+  & 89.07\% & 85.78\% & $-4.1$ & \best{0.526} & 85.21\% \\
+Partial Backbone DP
+  & 89.54\% & $-4.3$ & \best{0.502}
+  & 88.72\% & 86.47\% & $-3.4$ & 0.532 & 85.09\% \\
+Last-Layer DP
+  & 83.08\% & $-10.7$ & \best{0.503}
+  & 81.83\% & 82.68\% & $-7.2$ & \best{0.498} & 82.11\% \\
+Full-Model DP
+  & \worst{84.45\%} & $-9.4$ & \best{0.503}
+  & \worst{81.43\%} & \worst{79.82\%} & $-10.1$
+  & \worst{0.601} & \worst{77.52\%} \\
+\hline
+\multicolumn{9}{l}{\footnotesize
+  BERT Full-Model DP corrected (unfrozen backbone): $\varepsilon=1$ at 851\,s/epoch
+  vs.\ 207\,s no-DP (4.1$\times$).} \\
+\multicolumn{9}{l}{\footnotesize
+  DistilBERT Full-Model DP MIA AUC (0.601) exceeds the no-DP level (0.597)
+  — empirical privacy paradox.} \\
+\end{tabular}
+\end{table}
+
+\end{document}
