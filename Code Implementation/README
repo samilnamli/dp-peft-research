@@ -1,0 +1,104 @@
+Where to Privatize? Differential Privacy Placement in PEFT
+CS 577 — Data Privacy
+
+Experiments: BERT-base (AG News, 4-class) and DistilBERT-base (SST-2, binary).
+Six DP placement strategies compared under matched privacy budgets using Opacus DP-SGD.
+Membership inference attacks run after each training to measure empirical privacy.
+
+------------------------------------------------------------
+SETUP
+------------------------------------------------------------
+
+    pip install -r requirements.txt
+
+------------------------------------------------------------
+SOURCE FILES
+------------------------------------------------------------
+
+run_experiment.py
+    Main training script. Trains a model with a chosen DP placement strategy
+    and saves results (JSON) and checkpoint (PT) to ./results and ./checkpoints.
+
+run_mia.py
+    Membership inference attack script. Loads a saved checkpoint and runs a
+    loss-threshold attack, saving AUC and advantage scores to JSON.
+
+dp_peft/privacy/placements.py
+    Core contribution. Defines the six DP placement strategies (no_dp, adapter_only,
+    head_adapter, partial_backbone, last_layer, full_dp) and the Opacus integration
+    for selective per-layer noise injection.
+
+dp_peft/privacy/accounting.py
+    RDP privacy accountant wrapper. Computes noise multiplier for a target (epsilon, delta).
+
+dp_peft/models/text_model.py
+    BERT and DistilBERT with Houlsby adapter or LoRA PEFT modules.
+
+dp_peft/models/vision_model.py
+    ViT-B/16 with bottleneck adapter modules inserted after each attention block.
+
+dp_peft/data/loaders.py
+    Dataset loading and tokenization for AG News, SST-2 (text) and CIFAR-10 (vision).
+
+dp_peft/training/trainer.py
+    Training loop with Opacus DP-SGD, per-epoch metric tracking, and checkpointing.
+
+dp_peft/training/metrics.py
+    Tracks accuracy, F1, gradient norm variance, loss oscillation, and throughput.
+
+dp_peft/attacks/membership_inference.py
+    Loss-threshold and likelihood-ratio membership inference attacks.
+
+dp_peft/utils/logging.py
+    Weights & Biases logging and JSON result saving.
+
+dp_peft/utils/reproducibility.py
+    Seed setting (torch, numpy, random, CUDA) and environment info collection.
+
+------------------------------------------------------------
+EXPERIMENTS
+------------------------------------------------------------
+
+Experiment 1 — DistilBERT + SST-2, adapter PEFT, all placements at epsilon=1:
+
+    python run_experiment.py --model distilbert --dataset sst2 --peft_method adapter --placement no_dp --epochs 20 --batch_size 64 --lr 5e-4
+    python run_experiment.py --model distilbert --dataset sst2 --peft_method adapter --placement adapter_only --epsilon 1.0 --epochs 20 --batch_size 64 --lr 5e-4
+    python run_experiment.py --model distilbert --dataset sst2 --peft_method adapter --placement head_adapter --epsilon 1.0 --epochs 20 --batch_size 64 --lr 5e-4
+    python run_experiment.py --model distilbert --dataset sst2 --peft_method adapter --placement partial_backbone --epsilon 1.0 --epochs 20 --batch_size 64 --lr 5e-4
+    python run_experiment.py --model distilbert --dataset sst2 --peft_method adapter --placement last_layer --epsilon 1.0 --epochs 20 --batch_size 64 --lr 5e-4
+    python run_experiment.py --model distilbert --dataset sst2 --peft_method adapter --placement full_dp --epsilon 1.0 --epochs 20 --batch_size 64 --lr 5e-4
+
+Experiment 2 — BERT + AG News, adapter PEFT, all placements at epsilon=1:
+
+    python run_experiment.py --model bert --dataset agnews --peft_method adapter --placement no_dp --epochs 20 --batch_size 64 --lr 5e-4
+    python run_experiment.py --model bert --dataset agnews --peft_method adapter --placement adapter_only --epsilon 1.0 --epochs 20 --batch_size 64 --lr 5e-4
+    python run_experiment.py --model bert --dataset agnews --peft_method adapter --placement head_adapter --epsilon 1.0 --epochs 20 --batch_size 64 --lr 5e-4
+    python run_experiment.py --model bert --dataset agnews --peft_method adapter --placement partial_backbone --epsilon 1.0 --epochs 20 --batch_size 64 --lr 5e-4
+    python run_experiment.py --model bert --dataset agnews --peft_method adapter --placement last_layer --epsilon 1.0 --epochs 20 --batch_size 64 --lr 5e-4
+    python run_experiment.py --model bert --dataset agnews --peft_method adapter --placement full_dp --epsilon 1.0 --epochs 20 --batch_size 64 --lr 5e-4
+
+To run at epsilon=8, add --epsilon 8.0 to any DP placement command above.
+
+Membership Inference Attack (after training):
+
+    python run_mia.py --checkpoint ./checkpoints/<run_name>.pt --model distilbert --dataset sst2 --peft_method adapter
+
+Replace <run_name> with the filename produced by run_experiment.py (e.g.
+distilbert_sst2_adapter_adapter_only_eps1.0).
+
+------------------------------------------------------------
+OUTPUTS
+------------------------------------------------------------
+
+./results/<run_name>.json     training metrics (accuracy, loss curves, epoch time, epsilon)
+./checkpoints/<run_name>.pt   model checkpoint
+./checkpoints/<run_name>_mia.json   MIA results (AUC, advantage)
+
+------------------------------------------------------------
+NOTES
+------------------------------------------------------------
+
+- Requires a CUDA GPU. Set --device cpu for debugging only (very slow).
+- wandb logging is enabled by default. Set WANDB_MODE=offline to disable network upload.
+- delta is fixed at 1e-5 for all DP runs.
+- Seed is fixed at 42 for all reported experiments.
